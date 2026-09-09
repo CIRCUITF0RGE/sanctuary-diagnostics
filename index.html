@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SANCTUARY BAND Diagnostics</title>
+<style>
+  body { margin:0; min-height:100vh; display:flex; align-items:flex-start; justify-content:center;
+         background:#111d2d; color:#f8f9f7; padding:28px 0;
+         font-family:'Helvetica Neue',-apple-system,'Segoe UI',Roboto,sans-serif; }
+  .card { width:min(760px,94vw); background:#18263c; border-radius:16px; padding:28px 30px 24px; }
+  .brand { font-size:.72rem; letter-spacing:.32em; color:#bcd2ff; text-transform:uppercase; }
+  h1 { font-size:1.35rem; margin:.35rem 0 .2rem; }
+  .sub { color:#8fa0d0; font-size:.9rem; margin-bottom:20px; line-height:1.5; }
+  button { width:100%; padding:14px 18px; font-size:1rem; font-weight:600; border:0;
+           border-radius:10px; background:#4f6ef7; color:#fff; cursor:pointer; }
+  button:disabled { background:#2a3350; color:#7580a5; cursor:default; }
+  button.sec { background:#243252; color:#cfd9f5; margin-top:10px; }
+  .status { margin-top:16px; font-size:.9rem; color:#b8c2e0; white-space:pre-line; min-height:1.2em; }
+  .ok { color:#5fd08a; } .err { color:#f07a7a; } .warn { color:#f5c66b; }
+  .verdict { margin-top:18px; border-radius:12px; background:#132038; padding:16px 18px; display:none; }
+  .verdict h2 { font-size:.78rem; letter-spacing:.16em; text-transform:uppercase; color:#bcd2ff; margin:0 0 10px; }
+  .v-item { font-size:.92rem; line-height:1.5; margin:6px 0; padding-left:18px; text-indent:-18px; }
+  table { width:100%; border-collapse:collapse; font-size:.82rem; margin-top:8px; }
+  th,td { text-align:left; padding:5px 7px; border-bottom:1px solid #22314f; }
+  th { color:#8fa0d0; font-weight:600; }
+  details { margin-top:16px; font-size:.86rem; color:#8fa0d0; }
+  summary { cursor:pointer; }
+  pre { background:#0e1727; border-radius:10px; padding:12px; overflow-x:auto;
+        font-size:.74rem; color:#b8c2e0; max-height:340px; }
+  .foot { margin-top:18px; font-size:.72rem; color:#5f6a8f; line-height:1.5; }
+</style>
+<div class="card">
+  <div class="brand">bioverà &middot; SANCTUARY BAND</div>
+  <h1>Band Diagnostics</h1>
+  <p class="sub">Reads the band's built-in black box: every restart with its cause, and the record of
+  recent nights. It only reads &mdash; it changes nothing on the band and installs nothing.
+  Then press <b>Copy report</b> and send the text back to us.<br>
+  Best done in the morning after a night's use. Takes about 40 seconds.</p>
+
+  <button id="go">Connect band and read</button>
+  <button id="copy" class="sec" disabled>Copy report</button>
+  <button id="save" class="sec" disabled>Download report</button>
+  <div class="status" id="status"></div>
+
+  <div class="verdict" id="verdict"><h2>Summary</h2><div id="vbody"></div></div>
+
+  <details id="det" style="display:none">
+    <summary>Full report (this is what gets copied)</summary>
+    <pre id="raw"></pre>
+  </details>
+
+  <p class="foot">
+    Needs Chrome or Edge on a computer (not a phone, not Safari), and the band connected by USB-C.<br>
+    Nothing is sent anywhere automatically. The report stays on this computer until you send it.
+  </p>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const enc = new TextEncoder(), dec = new TextDecoder();
+let report = "";
+
+function say(msg, cls) { $("status").innerHTML = '<span class="' + (cls || "") + '">' + msg + '</span>'; }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---- read-only console commands. NOTHING here writes to the band. ---- */
+const CMDS = ["version", "battery", "cfg", "bootlog", "stats"];
+
+async function run() {
+  if (!("serial" in navigator)) { say("This browser cannot talk to the band. Please use Chrome or Edge on a computer.", "err"); return; }
+  $("go").disabled = true;
+  let port;
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200 });
+    try { await port.setSignals({ dataTerminalReady: false, requestToSend: false }); } catch (e) {}
+  } catch (e) {
+    say("No band selected. Plug it in with the USB-C cable and try again.", "err");
+    $("go").disabled = false; return;
+  }
+
+  const reader = port.readable.getReader();
+  const writer = port.writable.getWriter();
+  let buf = "";
+  let stopped = false;
+  (async () => {
+    try {
+      while (!stopped) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) buf += dec.decode(value, { stream: true });
+      }
+    } catch (e) {}
+  })();
+
+  try {
+    /* Opening the port restarts the band; wait for it to come up. */
+    say("Band connected. Waiting for it to start up (about 20 seconds)…");
+    const t0 = Date.now();
+    while (Date.now() - t0 < 22000) {
+      if (buf.includes("advertising as") || buf.includes("ready:")) { await sleep(1500); break; }
+      await sleep(300);
+    }
+    const boot = buf;
+    let out = {};
+    for (const c of CMDS) {
+      say("Reading: " + c + " …");
+      buf = "";
+      await writer.write(enc.encode(c + "\n"));
+      const wait = (c === "stats") ? 6000 : (c === "bootlog" ? 4000 : 2500);
+      await sleep(wait);
+      out[c] = buf;
+    }
+    stopped = true;
+    try { reader.cancel(); } catch (e) {}
+    try { writer.releaseLock(); } catch (e) {}
+    try { await port.close(); } catch (e) {}
+
+    build(boot, out);
+    say("Done. Please press “Copy report” and send us the text.", "ok");
+    $("copy").disabled = false; $("save").disabled = false; $("det").style.display = "";
+  } catch (e) {
+    stopped = true;
+    say("Could not read the band: " + e.message + "\nUnplug the cable, plug it in again and retry.", "err");
+    try { await port.close(); } catch (x) {}
+    $("go").disabled = false;
+  }
+}
+
+function grab(re, s, d) { const m = re.exec(s || ""); return m ? m[1] : d; }
+function jsonLines(s) {
+  const out = [];
+  for (const line of (s || "").split("\n")) {
+    const t = line.trim();
+    if (t.startsWith("{") && t.endsWith("}")) { try { out.push(JSON.parse(t)); } catch (e) {} }
+  }
+  return out;
+}
+
+function build(boot, out) {
+  const fw   = grab(/"version":"([^"]+)"/, out.version, grab(/App version:\s+(\S+)/, boot, "unknown"));
+  let band = grab(/advertising as (\S+)/, boot, "");
+  if (!band) {                       /* fallback: the radio MAC, printed earlier in the log */
+    const mac = grab(/Bluetooth MAC: ([0-9a-f:]+)/i, boot, "");
+    band = mac ? ("MAC " + mac) : "unknown";
+  }
+  const batt = jsonLines(out.battery)[0] || {};
+  const boots = jsonLines(out.bootlog).filter(o => "reason" in o);
+  const rows  = jsonLines(out.stats);
+  const life  = rows.find(o => o.lifetime) || {};
+  const sess  = rows.filter(o => "session_id" in o);
+
+  const CRASH = ["TASK_WDT", "PANIC", "INT_WDT", "WDT", "BROWNOUT"];
+  const crashes = boots.filter(b => CRASH.includes(b.reason));
+  const collapse = boots.filter(b => b.reason === "POWERON" && b.rtc === "lost");
+  const nights = sess.filter(s => (s.duration_min || 0) >= 20);
+  const silent = nights.filter(s => (s.snores || 0) > 0 && (s.nudges || 0) === 0);
+  const lowbatt = sess.filter(s => (s.flags || 0) & 8);
+
+  const v = [];
+  const add = (txt, cls) => v.push('<div class="v-item ' + (cls || "") + '">' + txt + "</div>");
+  add("Firmware <b>" + fw + "</b> &middot; band <b>" + band + "</b> &middot; battery " +
+      (batt.mv ? (batt.mv + " mV (" + batt.pct + "%)") : "unknown"));
+  if (crashes.length) {
+    const who = crashes.map(c => c.culprit).filter(Boolean);
+    add("⚠ <b>" + crashes.length + " unexpected restart(s)</b> in the last " + boots.length +
+        " starts" + (who.length ? " (task: " + [...new Set(who)].join(", ") + ")" : "") +
+        ". Each restart interrupts the night; on older firmware it also restarted the settle-in delay.", "warn");
+  } else {
+    add("✓ No unexpected restarts recorded.", "ok");
+  }
+  if (collapse.length) add("⚠ " + collapse.length + " power collapse(s) — battery ran empty or a bad connection.", "warn");
+  if (lowbatt.length) add("⚠ " + lowbatt.length + " night(s) ended by an empty battery — charge fully before bed.", "warn");
+  if (silent.length) {
+    add("⚠ <b>" + silent.length + " night(s) where snoring was detected but no nudge was delivered.</b> " +
+        "That is the pattern we are investigating.", "warn");
+  } else if (nights.length) {
+    add("✓ Every recorded night with snoring also delivered nudges.", "ok");
+  }
+  if (!nights.length) add("No full nights recorded yet on this band.", "");
+  add("Lifetime: " + (life.sessions || 0) + " sessions, " + (life.snores || 0) + " snores, " +
+      (life.nudges || 0) + " nudges, " + (life.apnea || 0) + " apnea-suspect events.");
+  $("vbody").innerHTML = v.join("");
+  $("verdict").style.display = "";
+
+  const L = [];
+  L.push("SANCTUARY BAND diagnostic report");
+  L.push("generated: " + new Date().toISOString());
+  L.push("band: " + band + "   firmware: " + fw);
+  L.push("battery: " + JSON.stringify(batt));
+  L.push("");
+  L.push("== restart history (oldest first) ==");
+  L.push("n\treason\trtc\tbatt_mV\tusb\tprev_run_s\tculprit");
+  for (const b of boots)
+    L.push([b.n, b.reason, b.rtc, b.batt_mv, b.usb, b.prev_s, b.culprit || ""].join("\t"));
+  L.push("");
+  L.push("== nights (newest first) ==");
+  L.push("id\tstart\tmin\tsnores\tnudges\tapnea\tbudget\tbatt_start\tbatt_end\tflags");
+  for (const s of sess) {
+    const when = s.start_unix ? new Date(s.start_unix * 1000).toISOString().replace("T", " ").slice(0, 16) : "clock unset";
+    L.push([s.session_id, when, s.duration_min, s.snores, s.nudges, s.apnea, s.budget_hits,
+            s.batt_start_mv, s.batt_end_mv, s.flags].join("\t"));
+  }
+  L.push("");
+  L.push("== settings ==");
+  L.push((out.cfg || "").split("\n").filter(x => x.includes("=")).join("\n"));
+  L.push("");
+  L.push("== startup log ==");
+  L.push(boot.split("\n").slice(-60).join("\n"));
+  report = L.join("\n");
+  $("raw").textContent = report;
+}
+
+$("go").onclick = run;
+$("copy").onclick = async () => {
+  try { await navigator.clipboard.writeText(report); say("Report copied. Please paste it into your message to us.", "ok"); }
+  catch (e) { say("Could not copy automatically — open the full report below, select all and copy.", "err"); }
+};
+$("save").onclick = () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([report], { type: "text/plain" }));
+  a.download = "sanctuary-diagnostics.txt"; a.click();
+};
+</script>
+</html>
