@@ -1,224 +1,62 @@
 <!doctype html>
-<html lang="en">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SANCTUARY BAND Diagnostics</title>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>SANCTUARY BAND — Support</title>
 <style>
-  body { margin:0; min-height:100vh; display:flex; align-items:flex-start; justify-content:center;
-         background:#111d2d; color:#f8f9f7; padding:28px 0;
-         font-family:'Helvetica Neue',-apple-system,'Segoe UI',Roboto,sans-serif; }
-  .card { width:min(760px,94vw); background:#18263c; border-radius:16px; padding:28px 30px 24px; }
-  .brand { font-size:.72rem; letter-spacing:.32em; color:#bcd2ff; text-transform:uppercase; }
-  h1 { font-size:1.35rem; margin:.35rem 0 .2rem; }
-  .sub { color:#8fa0d0; font-size:.9rem; margin-bottom:20px; line-height:1.5; }
-  button { width:100%; padding:14px 18px; font-size:1rem; font-weight:600; border:0;
-           border-radius:10px; background:#4f6ef7; color:#fff; cursor:pointer; }
-  button:disabled { background:#2a3350; color:#7580a5; cursor:default; }
-  button.sec { background:#243252; color:#cfd9f5; margin-top:10px; }
-  .status { margin-top:16px; font-size:.9rem; color:#b8c2e0; white-space:pre-line; min-height:1.2em; }
-  .ok { color:#5fd08a; } .err { color:#f07a7a; } .warn { color:#f5c66b; }
-  .verdict { margin-top:18px; border-radius:12px; background:#132038; padding:16px 18px; display:none; }
-  .verdict h2 { font-size:.78rem; letter-spacing:.16em; text-transform:uppercase; color:#bcd2ff; margin:0 0 10px; }
-  .v-item { font-size:.92rem; line-height:1.5; margin:6px 0; padding-left:18px; text-indent:-18px; }
-  table { width:100%; border-collapse:collapse; font-size:.82rem; margin-top:8px; }
-  th,td { text-align:left; padding:5px 7px; border-bottom:1px solid #22314f; }
-  th { color:#8fa0d0; font-weight:600; }
-  details { margin-top:16px; font-size:.86rem; color:#8fa0d0; }
-  summary { cursor:pointer; }
-  pre { background:#0e1727; border-radius:10px; padding:12px; overflow-x:auto;
-        font-size:.74rem; color:#b8c2e0; max-height:340px; }
-  .foot { margin-top:18px; font-size:.72rem; color:#5f6a8f; line-height:1.5; }
-</style>
-<div class="card">
-  <div class="brand">bioverà &middot; SANCTUARY BAND</div>
-  <h1>Band Diagnostics</h1>
-  <p class="sub">Reads the band's built-in black box: every restart with its cause, and the record of
-  recent nights. It only reads &mdash; it changes nothing on the band and installs nothing.
-  Then press <b>Copy report</b> and send the text back to us.<br>
-  Best done in the morning after a night's use. Takes about 40 seconds.</p>
-
-  <button id="go">Connect band and read</button>
-  <button id="copy" class="sec" disabled>Copy report</button>
-  <button id="save" class="sec" disabled>Download report</button>
-  <div class="status" id="status"></div>
-
-  <div class="verdict" id="verdict"><h2>Summary</h2><div id="vbody"></div></div>
-
-  <details id="det" style="display:none">
-    <summary>Full report (this is what gets copied)</summary>
-    <pre id="raw"></pre>
-  </details>
-
-  <p class="foot">
-    Needs Chrome or Edge on a computer (not a phone, not Safari), and the band connected by USB-C.<br>
-    Nothing is sent anywhere automatically. The report stays on this computer until you send it.
-  </p>
-</div>
+  body { margin:0; min-height:100vh; background:#111d2d; color:#eef1f8;
+         font:16px/1.5 -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+         display:flex; align-items:center; justify-content:center; padding:24px 16px; box-sizing:border-box; }
+  form { width:100%; max-width:380px; background:#18263c; border:1px solid #2a3350; border-radius:14px; padding:26px 22px; }
+  .brand { letter-spacing:.2em; font-size:12px; color:#b8c2e0; }
+  h1 { margin:6px 0 2px; font-size:22px; }
+  p { margin:0 0 18px; color:#b8c2e0; font-size:14.5px; }
+  input { width:100%; box-sizing:border-box; padding:11px 12px; border-radius:9px; border:1px solid #2a3350;
+          background:#0d1624; color:#eef1f8; font-size:16px; }
+  button { width:100%; margin-top:12px; padding:11px; border:0; border-radius:9px; background:#4f6ef7;
+           color:#fff; font-size:16px; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:wait; }
+  #msg { min-height:22px; margin-top:10px; font-size:14px; color:#f07a7a; }
+</style></head>
+<body>
+<form id="f" autocomplete="on">
+  <div class="brand">bioverà · SANCTUARY</div>
+  <h1>SANCTUARY BAND</h1>
+  <p>Support — please enter the access password you received from us.</p>
+  <input id="pw" type="password" autocomplete="current-password" placeholder="Password" required autofocus>
+  <button id="b" type="submit">Unlock</button>
+  <div id="msg" role="status"></div>
+</form>
+<script type="application/json" id="payload">{"v":1,"iter":600000,"salt":"hxPGhpCtjOGPsPb+lr+S6g==","iv":"ZVyuxoooNm1Gv6Uw","ct":"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"}</script>
 <script>
-const $ = id => document.getElementById(id);
-const enc = new TextEncoder(), dec = new TextDecoder();
-let report = "";
-
-function say(msg, cls) { $("status").innerHTML = '<span class="' + (cls || "") + '">' + msg + '</span>'; }
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-/* ---- read-only console commands. NOTHING here writes to the band. ---- */
-const CMDS = ["version", "battery", "cfg", "bootlog", "stats"];
-
-async function run() {
-  if (!("serial" in navigator)) { say("This browser cannot talk to the band. Please use Chrome or Edge on a computer.", "err"); return; }
-  $("go").disabled = true;
-  let port;
-  try {
-    port = await navigator.serial.requestPort();
-    await port.open({ baudRate: 115200 });
-    try { await port.setSignals({ dataTerminalReady: false, requestToSend: false }); } catch (e) {}
-  } catch (e) {
-    say("No band selected. Plug it in with the USB-C cable and try again.", "err");
-    $("go").disabled = false; return;
+(function () {
+  var KEY = 'sanctuary-site-pw';
+  var P = JSON.parse(document.getElementById('payload').textContent);
+  function bytes(s) { var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+  async function open(pw) {
+    var base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+    var key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: bytes(P.salt), iterations: P.iter, hash: 'SHA-256' },
+                                            base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    var pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(P.iv) }, key, bytes(P.ct));
+    return new TextDecoder().decode(pt);
   }
-
-  const reader = port.readable.getReader();
-  const writer = port.writable.getWriter();
-  let buf = "";
-  let stopped = false;
-  (async () => {
-    try {
-      while (!stopped) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        if (value) buf += dec.decode(value, { stream: true });
-      }
-    } catch (e) {}
-  })();
-
-  try {
-    /* Opening the port restarts the band; wait for it to come up. */
-    say("Band connected. Waiting for it to start up (about 20 seconds)…");
-    const t0 = Date.now();
-    while (Date.now() - t0 < 22000) {
-      if (buf.includes("advertising as") || buf.includes("ready:")) { await sleep(1500); break; }
-      await sleep(300);
-    }
-    const boot = buf;
-    let out = {};
-    for (const c of CMDS) {
-      say("Reading: " + c + " …");
-      buf = "";
-      await writer.write(enc.encode(c + "\n"));
-      const wait = (c === "stats") ? 6000 : (c === "bootlog" ? 4000 : 2500);
-      await sleep(wait);
-      out[c] = buf;
-    }
-    stopped = true;
-    try { reader.cancel(); } catch (e) {}
-    try { writer.releaseLock(); } catch (e) {}
-    try { await port.close(); } catch (e) {}
-
-    build(boot, out);
-    say("Done. Please press “Copy report” and send us the text.", "ok");
-    $("copy").disabled = false; $("save").disabled = false; $("det").style.display = "";
-  } catch (e) {
-    stopped = true;
-    say("Could not read the band: " + e.message + "\nUnplug the cable, plug it in again and retry.", "err");
-    try { await port.close(); } catch (x) {}
-    $("go").disabled = false;
+  function show(html, pw) {
+    try { sessionStorage.setItem(KEY, pw); } catch (e) {}
+    document.open(); document.write(html); document.close();
   }
-}
-
-function grab(re, s, d) { const m = re.exec(s || ""); return m ? m[1] : d; }
-function jsonLines(s) {
-  const out = [];
-  for (const line of (s || "").split("\n")) {
-    const t = line.trim();
-    if (t.startsWith("{") && t.endsWith("}")) { try { out.push(JSON.parse(t)); } catch (e) {} }
-  }
-  return out;
-}
-
-function build(boot, out) {
-  const fw   = grab(/"version":"([^"]+)"/, out.version, grab(/App version:\s+(\S+)/, boot, "unknown"));
-  let band = grab(/advertising as (\S+)/, boot, "");
-  if (!band) {                       /* fallback: the radio MAC, printed earlier in the log */
-    const mac = grab(/Bluetooth MAC: ([0-9a-f:]+)/i, boot, "");
-    band = mac ? ("MAC " + mac) : "unknown";
-  }
-  const batt = jsonLines(out.battery)[0] || {};
-  const boots = jsonLines(out.bootlog).filter(o => "reason" in o);
-  const rows  = jsonLines(out.stats);
-  const life  = rows.find(o => o.lifetime) || {};
-  const sess  = rows.filter(o => "session_id" in o);
-
-  const CRASH = ["TASK_WDT", "PANIC", "INT_WDT", "WDT", "BROWNOUT"];
-  const crashes = boots.filter(b => CRASH.includes(b.reason));
-  const collapse = boots.filter(b => b.reason === "POWERON" && b.rtc === "lost");
-  const nights = sess.filter(s => (s.duration_min || 0) >= 20);
-  const silent = nights.filter(s => (s.snores || 0) > 0 && (s.nudges || 0) === 0);
-  const lowbatt = sess.filter(s => (s.flags || 0) & 8);
-
-  const v = [];
-  const add = (txt, cls) => v.push('<div class="v-item ' + (cls || "") + '">' + txt + "</div>");
-  add("Firmware <b>" + fw + "</b> &middot; band <b>" + band + "</b> &middot; battery " +
-      (batt.mv ? (batt.mv + " mV (" + batt.pct + "%)") : "unknown"));
-  if (crashes.length) {
-    const who = crashes.map(c => c.culprit).filter(Boolean);
-    add("⚠ <b>" + crashes.length + " unexpected restart(s)</b> in the last " + boots.length +
-        " starts" + (who.length ? " (task: " + [...new Set(who)].join(", ") + ")" : "") +
-        ". Each restart interrupts the night; on older firmware it also restarted the settle-in delay.", "warn");
-  } else {
-    add("✓ No unexpected restarts recorded.", "ok");
-  }
-  if (collapse.length) add("⚠ " + collapse.length + " power collapse(s) — battery ran empty or a bad connection.", "warn");
-  if (lowbatt.length) add("⚠ " + lowbatt.length + " night(s) ended by an empty battery — charge fully before bed.", "warn");
-  if (silent.length) {
-    add("⚠ <b>" + silent.length + " night(s) where snoring was detected but no nudge was delivered.</b> " +
-        "That is the pattern we are investigating.", "warn");
-  } else if (nights.length) {
-    add("✓ Every recorded night with snoring also delivered nudges.", "ok");
-  }
-  if (!nights.length) add("No full nights recorded yet on this band.", "");
-  add("Lifetime: " + (life.sessions || 0) + " sessions, " + (life.snores || 0) + " snores, " +
-      (life.nudges || 0) + " nudges, " + (life.apnea || 0) + " apnea-suspect events.");
-  $("vbody").innerHTML = v.join("");
-  $("verdict").style.display = "";
-
-  const L = [];
-  L.push("SANCTUARY BAND diagnostic report");
-  L.push("generated: " + new Date().toISOString());
-  L.push("band: " + band + "   firmware: " + fw);
-  L.push("battery: " + JSON.stringify(batt));
-  L.push("");
-  L.push("== restart history (oldest first) ==");
-  L.push("n\treason\trtc\tbatt_mV\tusb\tprev_run_s\tculprit");
-  for (const b of boots)
-    L.push([b.n, b.reason, b.rtc, b.batt_mv, b.usb, b.prev_s, b.culprit || ""].join("\t"));
-  L.push("");
-  L.push("== nights (newest first) ==");
-  L.push("id\tstart\tmin\tsnores\tnudges\tapnea\tbudget\tbatt_start\tbatt_end\tflags");
-  for (const s of sess) {
-    const when = s.start_unix ? new Date(s.start_unix * 1000).toISOString().replace("T", " ").slice(0, 16) : "clock unset";
-    L.push([s.session_id, when, s.duration_min, s.snores, s.nudges, s.apnea, s.budget_hits,
-            s.batt_start_mv, s.batt_end_mv, s.flags].join("\t"));
-  }
-  L.push("");
-  L.push("== settings ==");
-  L.push((out.cfg || "").split("\n").filter(x => x.includes("=")).join("\n"));
-  L.push("");
-  L.push("== startup log ==");
-  L.push(boot.split("\n").slice(-60).join("\n"));
-  report = L.join("\n");
-  $("raw").textContent = report;
-}
-
-$("go").onclick = run;
-$("copy").onclick = async () => {
-  try { await navigator.clipboard.writeText(report); say("Report copied. Please paste it into your message to us.", "ok"); }
-  catch (e) { say("Could not copy automatically — open the full report below, select all and copy.", "err"); }
-};
-$("save").onclick = () => {
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([report], { type: "text/plain" }));
-  a.download = "sanctuary-diagnostics.txt"; a.click();
-};
+  var f = document.getElementById('f'), b = document.getElementById('b'), msg = document.getElementById('msg');
+  if (!window.crypto || !crypto.subtle) { msg.textContent = 'This browser cannot open the page. Please use Google Chrome or Microsoft Edge.'; b.disabled = true; return; }
+  var saved = null; try { saved = sessionStorage.getItem(KEY); } catch (e) {}
+  if (saved) { b.disabled = true; msg.style.color = '#b8c2e0'; msg.textContent = 'Opening…';
+    open(saved).then(function (h) { show(h, saved); })
+               .catch(function () { try { sessionStorage.removeItem(KEY); } catch (e) {} b.disabled = false; msg.textContent = ''; }); }
+  f.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var pw = document.getElementById('pw').value;
+    b.disabled = true; msg.style.color = '#b8c2e0'; msg.textContent = 'Checking…';
+    open(pw).then(function (h) { show(h, pw); })
+            .catch(function () { b.disabled = false; msg.style.color = '#f07a7a'; msg.textContent = 'That password is not right.'; });
+  });
+})();
 </script>
-</html>
+</body></html>
